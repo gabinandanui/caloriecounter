@@ -92,7 +92,6 @@ const FoodTracker = () => {
         }
       };
       console.log(newFoodEntry);
-      
     }
   };
   return (

@@ -91,6 +91,7 @@ const FoodTracker = () => {
           fiber: nutrientCalculator(foodItem, formJsone.measurement, formJsone.quantity, "fiber"),
         }
       };
+     
       console.log(newFoodEntry);
     }
   };

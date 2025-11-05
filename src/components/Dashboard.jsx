@@ -50,11 +50,11 @@ const FoodTracker = () => {
   
   /* dropdown reset */
   function resetDropdowns() {
-    setfoodItem("");
-    setMeasurement("");
-    foodQuantityRef.current.value = "";
-    setMeasurementDisable(true);
-    setquantityDisable(true);
+    // setfoodItem("");
+    // setMeasurement("");
+    // foodQuantityRef.current.value = "";
+    // setMeasurementDisable(true);
+    // setquantityDisable(true);
   }
   /* Intake histroy*/
   const [intakeHistory, setIntakeHistory] = useState([]);

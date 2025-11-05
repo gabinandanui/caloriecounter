@@ -290,7 +290,7 @@ const FoodTracker = () => {
           </form>
         </div>
         <div className="flex-1 mt-5">
-          <TodayHistory intakeHistory={intakeHistory} setIntakeHistory={setIntakeHistory}/>
+          <TodayHistory intakeHistory={intakeHistory}/>
         </div>
       </div>
     </div>

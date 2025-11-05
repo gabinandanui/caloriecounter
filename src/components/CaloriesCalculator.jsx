@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Card,
@@ -32,7 +32,7 @@ import {
   DateRange,
   CalendarMonth,
 } from "@mui/icons-material";
-const CaloriesCalculator = () => {
+const CaloriesCalculator = ({ targetCalouries, setTargetCalouries, setSnackBar, setSnackBarMsg}) => {
   const [results, setResults] = useState(null);
   const [errors, setErrors] = useState({});
 
@@ -77,6 +77,22 @@ const CaloriesCalculator = () => {
       setFormValues({ ...formValues, [name]: value });
     }
   };
+  const handleTargetUpdate = (targetCalouries) => {
+    setTargetCalouries(targetCalouries)
+    setSnackBar(true)
+    setSnackBarMsg('Target Calories Updated')
+    const foodTargetKey = `intakeFoodTarget_${"abinandang"}`;
+    localStorage.setItem(foodTargetKey, targetCalouries);
+  }
+  useEffect(() => {
+    const foodTargetKey = `intakeFoodTarget_${"abinandang"}`;
+    const savedFoodTarget = localStorage.getItem(foodTargetKey);
+    console.log(savedFoodTarget);
+    
+    if (savedFoodTarget) {
+      setTargetCalouries(savedFoodTarget);
+    }
+  }, []);
   const validateForm = (value) => {
     const validationErrors = {};
     const weight = parseFloat(value.weight);
@@ -350,7 +366,7 @@ const CaloriesCalculator = () => {
                   {errors.calorieSafety}
                 </Alert>
               )}
-              <Stack spacing={3}>
+              <Stack spacing={3} className="text-left">
                 <h2>Step 1: Personal Information</h2>
                 <FormControl fullWidth margin="normal" error={!!errors.gender}>
                   <FormLabel id="demo-row-radio-buttons-group-label">
@@ -526,59 +542,130 @@ const CaloriesCalculator = () => {
         </Card>
         {/* Results Display */}
         {results && (
-          <Card sx={{ my: 5 }}>
-            <CardHeader title="Your Results" />
-            <CardContent>
-              <Stack direction="row" spacing={4} alignItems="center">
-                <item className="flex">
-                  <LocalFireDepartment color="error" />
-                  <Typography>
-                    <b>BMR:</b> {results.bmr.toFixed(0)} calories/day
-                  </Typography>
-                </item>
-                <item className="flex">
-                  <FitnessCenter color="primary" />
-                  <Typography>
-                    <b>TDEE:</b> {results.tdee.toFixed(0)} calories/day
-                  </Typography>
-                </item>
-                <item className="flex">
-                  <Scale color="success" />
-                  <Typography>
-                    <b>Target Calories:</b> {results.dailyTarget.toFixed(0)}{" "}
-                    calories/day
-                  </Typography>
-                </item>
-                <item className="flex">
-                  <DateRange color="success" />
-                  <Typography>
-                    Estimated weeks to goal:{" "}
-                    <b>{results.weeksToGoal.toFixed(1)}</b>
-                  </Typography>
-                </item>
-                <item className="flex">
-                  <CalendarMonth color="success" />
-                  <Typography>
-                    Estimated months to goal:{" "}
-                    <b>{(results.weeksToGoal / 4.345).toFixed(1)}</b>
-                  </Typography>
-                </item>
-              </Stack>
+          <>
+            <Card sx={{ my: 5 }}>
+              <CardHeader title="Your Results" />
+              <CardContent>
+                <Stack direction="row" spacing={4} alignItems="center">
+                  <item className="flex">
+                    <LocalFireDepartment color="error" />
+                    <Typography>
+                      <b>BMR:</b> {results.bmr.toFixed(0)} calories/day
+                    </Typography>
+                  </item>
+                  <item className="flex">
+                    <FitnessCenter color="primary" />
+                    <Typography>
+                      <b>TDEE:</b> {results.tdee.toFixed(0)} calories/day
+                    </Typography>
+                  </item>
+                  <item className="flex">
+                    <Scale color="success" />
+                    <Typography>
+                      <b>Target Calories:</b> {results.dailyTarget.toFixed(0)}{" "}
+                      calories/day
+                    </Typography>
+                  </item>
+                  <item className="flex">
+                    <DateRange color="success" />
+                    <Typography>
+                      Estimated weeks to goal:{" "}
+                      <b>{results.weeksToGoal.toFixed(1)}</b>
+                    </Typography>
+                  </item>
+                  <item className="flex">
+                    <CalendarMonth color="success" />
+                    <Typography>
+                      Estimated months to goal:{" "}
+                      <b>{(results.weeksToGoal / 4.345).toFixed(1)}</b>
+                    </Typography>
+                  </item>
+                </Stack>
 
-              {results.dailyTarget < minCal[formValues.gender] && (
-                <h2>
-                  Daily calories below safe minimum. Please raise your goal or
-                  consult a doctor.
-                </h2>
-              )}
-              {results.weeklyDeficit / 7 > 1000 && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
-                  Your daily deficit is above recommended maximum (1000
-                  cal/day)!
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
+                {results.dailyTarget < minCal[formValues.gender] && (
+                  <h2>
+                    Daily calories below safe minimum. Please raise your goal or
+                    consult a doctor.
+                  </h2>
+                )}
+                {results.weeklyDeficit / 7 > 1000 && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    Your daily deficit is above recommended maximum (1000
+                    cal/day)!
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+            <Card
+              variant="outlined"
+              sx={{
+                minWidth: 275,
+                borderRadius: 4,
+                borderLeft: "4px solid #2196f3",
+                background: "rgba(29, 78, 216, 0.15)",
+                marginTop: "20px",
+              }}
+            >
+              <CardContent className="flex flex-col">
+                <h2 className="text-white">Set target calouries</h2>
+                <TextField
+                  variant="outlined"
+                  type="number"
+                  name="quantity"
+                  value={results.dailyTarget.toFixed(0)}
+                  sx={{
+                    // Target the text inside the input field
+                    "& .MuiInputBase-input": {
+                      color: "white",
+                    },
+                    "& .MuiOutlinedInput-root.Mui-disabled .MuiOutlinedInput-notchedOutline":
+                      {
+                        borderColor: "#747474", // Your desired disabled color
+                      },
+                    "& .MuiFormLabel-root.Mui-disabled": {
+                      color: "#747474", // Your desired disabled color
+                    },
+                    // Target the label text
+                    "& .MuiInputLabel-root": {
+                      color: "#aab4c2", // A lighter grey for the label
+                    },
+                    // Target the label text when focused
+                    "& .MuiInputLabel-root.Mui-focused": {
+                      color: "#2196f3", // Blue color on focus
+                    },
+                    // Target the border of the input
+                    "& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline":
+                      {
+                        borderColor: "rgba(33, 150, 243, 0.5)",
+                      },
+                    // Change border on hover
+                    "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline":
+                      {
+                        borderColor: "#2196f3",
+                      },
+                    // Change border when focused
+                    "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                      {
+                        borderColor: "#2196f3",
+                      },
+                  }}
+                />
+              </CardContent>
+            </Card>
+            <Button
+              variant="contained"
+              sx={{
+                borderRadius: "12px",
+                fontSize: "12px",
+                padding: "4px 12px",
+                marginTop: "10px",
+              }}
+              type="button"
+              onClick={handleTargetUpdate(results.dailyTarget.toFixed(0))}
+            >
+              Update Target Calouries
+            </Button>
+          </>
         )}
       </Container>
     </>

@@ -1,9 +1,5 @@
 import React from "react";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import TextField from "@mui/material/TextField";
-import Autocomplete from "@mui/material/Autocomplete";
-import Paper from "@mui/material/Paper";
+import { Card, CardContent, TextField, Autocomplete, Paper } from "@mui/material";
 const AutoCompleteComponent = ({
   optionsList,
   label = "Select an option",

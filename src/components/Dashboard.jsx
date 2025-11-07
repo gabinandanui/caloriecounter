@@ -9,6 +9,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs, { Dayjs } from "dayjs";
 import CalorieChart from "./CalorieChart";
+import { CircularProgress, Alert } from "@mui/material";
 const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
   /* Food traking */
   const foodQuantityRef = useRef(null);
@@ -18,6 +19,11 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
   const [quantityDisable, setquantityDisable] = useState(true);
   const [todayData, setTodayData] = useState([]);
   const [totalCalories, setTotalCalories] = useState(0);
+  // AI Tips State
+  const [aiTips, setAiTips] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
   /* Food selection handler */
   const handleFoodSelection = (data) => {
     setfoodItem(data);
@@ -188,9 +194,47 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
       }
     }, [todayData]);
 
+  const handleGetAiTips = async () => {
+    setIsAiLoading(true);
+    setAiError(null);
+    setAiTips('');
+
+    if (!todayData || todayData.length === 0 || !todayData[0].foodEntries || todayData[0].foodEntries.length === 0) {
+      setAiError('No food data for today to analyze.');
+      setIsAiLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/analyzeFoodIntake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          todayData: todayData[0].foodEntries,
+          totalCalories,
+          targetCalories: targetCalouries,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get AI tips');
+      }
+
+      const data = await response.json();
+      setAiTips(data.tips);
+    } catch (error) {
+      setAiError(error.message);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   return (
     <Container>
-      <div className="flex flex-col text-white text-left">
+      <div className="flex flex-col text-white text-left mt-5">
         <h2 className="text-white text-left font-semibold">Food Tracker</h2>
         <p className="text-white text-left font-semibold">
           Add food to track your intake
@@ -288,6 +332,44 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
                 Submit{" "}
               </Button>
             </form>
+            <div className="text-center mt-4">
+                <Button
+                  variant="contained"
+                  onClick={handleGetAiTips}
+                  disabled={isAiLoading}
+                  sx={{
+                    background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
+                    color: 'white',
+                    boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+                  }}
+                >
+                  Get AI Tips
+                </Button>
+              </div>
+
+              {isAiLoading && (
+                <div className="text-center mt-4">
+                  <CircularProgress size={24} />
+                  <p>Analyzing your intake...</p>
+                </div>
+              )}
+
+              {aiError && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {aiError}
+                </Alert>
+              )}
+
+              {aiTips && (
+                <Card sx={{ mt: 2, background: 'rgba(29, 78, 216, 0.25)', borderRadius: 4 }}>
+                  <CardContent className="text-white">
+                    <h3 className="text-lg font-semibold mb-2">✨ Gemini's Tips</h3>
+                    {aiTips.split('\n').map((tip, index) => (
+                      <p key={index} className="text-sm mb-1">{tip}</p>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
           </div>
           <div className="flex-1 mt-5">
             <h2>Select Date</h2>
@@ -349,6 +431,7 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
             <div className="flex-1 mt-5">
               <CalorieChart targetCalouries={targetCalouries} totalCalories={totalCalories} />
               <h2 className="text-center">Target:{targetCalouries} Consumed: {totalCalories}</h2>
+              
             </div>
           </div>
         </div>

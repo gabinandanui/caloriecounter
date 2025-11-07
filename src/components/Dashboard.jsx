@@ -1,8 +1,7 @@
-// src/pages/FoodTracker.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { foodDataByKey } from "../../foodData";
 import AutoCompleteComponent from "../components/AutoCompleteComponent";
-import { TextField, Card, CardContent, Button, Container  } from "@mui/material";
+import { TextField, Card, CardContent, Button, Container } from "@mui/material";
 import TodayHistory from "./TodayHistory";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -10,11 +9,12 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs, { Dayjs } from "dayjs";
 import CalorieChart from "./CalorieChart";
 import { CircularProgress, Alert } from "@mui/material";
+
 const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
   /* Food traking */
   const foodQuantityRef = useRef(null);
-  const [foodItem, setfoodItem] = useState("");
-  const [measurement, setMeasurement] = useState("");
+  const [foodItem, setfoodItem] = useState(null); // Use null for AutoComplete
+  const [measurement, setMeasurement] = useState(null); // Use null for AutoComplete
   const [measurementDisable, setMeasurementDisable] = useState(true);
   const [quantityDisable, setquantityDisable] = useState(true);
   const [todayData, setTodayData] = useState([]);
@@ -23,18 +23,27 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
   const [aiTips, setAiTips] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
+  
+  /* Intake histroy*/
+  const [intakeHistory, setIntakeHistory] = useState([]);
+  const foodHistoryKey = `intakeFoodHistory_${"abinandang"}`; // Define key once
+
+  // --- FIX 1: LOAD HISTORY FROM LOCALSTORAGE ON MOUNT ---
+  useEffect(() => {
+    const savedFoodHistory = localStorage.getItem(foodHistoryKey);
+    if (savedFoodHistory && savedFoodHistory !== "[]") {
+      setIntakeHistory(JSON.parse(savedFoodHistory));
+    }
+  }, []); // Empty dependency array means this runs once on mount
 
   /* Food selection handler */
   const handleFoodSelection = (data) => {
     setfoodItem(data);
     setMeasurement(null);
     setMeasurementDisable(data === null ? true : false);
-    setquantityDisable(
-      data === null || data === "" || measurement === "" || measurement === null
-        ? true
-        : false
-    );
+    setquantityDisable(true); // Always disable quantity when food changes
   };
+
   /* Food measurement selection */
   const handleMeasurementSelection = (data) => {
     setMeasurement(data);
@@ -42,15 +51,17 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
   };
 
   /* dropdown reset */
+  // --- FIX 2: UNCOMMENT AND FIX FORM RESET LOGIC ---
   function resetDropdowns() {
-    // setfoodItem("");
-    // setMeasurement("");
-    // foodQuantityRef.current.value = "";
-    // setMeasurementDisable(true);
-    // setquantityDisable(true);
+    setfoodItem(null); // Set to null to clear AutoComplete
+    setMeasurement(null); // Set to null to clear AutoComplete
+    if (foodQuantityRef.current) {
+        foodQuantityRef.current.value = "";
+    }
+    setMeasurementDisable(true);
+    setquantityDisable(true);
   }
-  /* Intake histroy*/
-  const [intakeHistory, setIntakeHistory] = useState([]);
+
   const nutrientCalculator = (foodName, measurement, quantity, nutrient) => {
     let nutrientValue = 0;
     // Added optional chaining (?) in case foodName is null
@@ -61,6 +72,7 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
     });
     return nutrientValue * (quantity || 0); // Default to 0 if quantity is bad
   };
+
   /* Form submission handler*/
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -85,12 +97,10 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
       setSnackBarMsg("Please enter a valid quantity and measurement");
       return;
     } else {
-      // 1. Get today's date as a consistent string key (e.g., "2025-11-04")
-      // This is the key for our "Daily Log" document
+      // 1. Get today's date
       const todayDateString = dayjs().format("YYYY-MM-DD");
 
       // 2. Create the new food entry object
-      // We use a full timestamp here for the specific item
       const newFoodEntry = {
         id: Date.now(),
         quantity: formJsone.quantity,
@@ -132,12 +142,11 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
       };
 
       // 3. Get history from localStorage
-      const foodHistoryKey = `intakeFoodHistory_${"abinandang"}`;
+      // We read from localStorage *first* to avoid race conditions
       const savedFoodHistory = localStorage.getItem(foodHistoryKey);
-      let updatedHistory = []; // This will be our array of DailyLog objects
+      let updatedHistory = []; 
 
       if (savedFoodHistory && savedFoodHistory !== "[]") {
-        // Parse the saved history (which is an array of Daily Logs)
         updatedHistory = JSON.parse(savedFoodHistory);
       }
 
@@ -145,26 +154,25 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
       let todayLog = updatedHistory.find((log) => log.date === todayDateString);
 
       if (todayLog) {
-        // 5a. If today's log exists, add the new food to its foodEntries array
+        // 5a. If today's log exists, add the new food
         todayLog.foodEntries.push(newFoodEntry);
-        resetDropdowns();
       } else {
         // 5b. If not, create a new daily log for today
         const newDailyLog = {
           userId: "abinandang",
           date: todayDateString,
           foodEntries: [newFoodEntry],
-          waterEntries: [], // Ready for when you add water tracking
+          waterEntries: [], 
         };
         updatedHistory.push(newDailyLog);
-        resetDropdowns();
       }
 
       // 6. Update React state AND save back to localStorage
       setIntakeHistory(updatedHistory);
-      localStorage.setItem(foodHistoryKey, JSON.stringify(updatedHistory)); // <-- This is the new, crucial part
-
-      // 7. Show snackbar notification
+      localStorage.setItem(foodHistoryKey, JSON.stringify(updatedHistory)); 
+      
+      // 7. Reset form and show notification
+      resetDropdowns(); // <-- This will now work
       setSnackBar(true);
       setSnackBarMsg(
         `${formJsone.quantity} ${formJsone.measurement} of ${foodItem} added it is of ${newFoodEntry.nutrition.calories} calories`
@@ -172,65 +180,29 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
       console.log("Added new food entry:", newFoodEntry);
     }
   };
-    /* Date picker */
+  /* Date picker */
   const [datePicker, setdatePicker] = React.useState(dayjs());
-  useEffect(() => {
-      const filterTodayDate = intakeHistory.filter(
-        (item) =>
-          dayjs(item.date).format("YYYY-MM-DD") ===
-          dayjs(datePicker).format("YYYY-MM-DD")
-      );
-      setTodayData(filterTodayDate);
-    }, [datePicker, intakeHistory]);
   
-    useEffect(() => {
-      if (todayData && todayData.length > 0 && todayData[0].foodEntries) {
-        const total = todayData[0].foodEntries
-          .flatMap((item) => item.nutrition.calories)
-          .reduce((acc, calories) => acc + calories, 0);
-        setTotalCalories(total);
-      } else {
-        setTotalCalories(0);
-      }
-    }, [todayData]);
+  useEffect(() => {
+    const filterTodayDate = intakeHistory.filter(
+      (item) =>
+        dayjs(item.date).format("YYYY-MM-DD") ===
+        dayjs(datePicker).format("YYYY-MM-DD")
+    );
+    setTodayData(filterTodayDate);
+  }, [datePicker, intakeHistory]);
 
-  const handleGetAiTips = async () => {
-    setIsAiLoading(true);
-    setAiError(null);
-    setAiTips('');
-
-    if (!todayData || todayData.length === 0 || !todayData[0].foodEntries || todayData[0].foodEntries.length === 0) {
-      setAiError('No food data for today to analyze.');
-      setIsAiLoading(false);
-      return;
+  useEffect(() => {
+    if (todayData && todayData.length > 0 && todayData[0].foodEntries) {
+      const total = todayData[0].foodEntries
+        .flatMap((item) => item.nutrition.calories)
+        .reduce((acc, calories) => acc + calories, 0);
+      setTotalCalories(total);
+    } else {
+      setTotalCalories(0);
     }
+  }, [todayData]);
 
-    try {
-      const response = await fetch('/api/analyzeFoodIntake', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          todayData: todayData[0].foodEntries,
-          totalCalories,
-          targetCalories: targetCalouries,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get AI tips');
-      }
-
-      const data = await response.json();
-      setAiTips(data.tips);
-    } catch (error) {
-      setAiError(error.message);
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
 
   return (
     <Container>
@@ -333,43 +305,7 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
               </Button>
             </form>
             <div className="text-center mt-4">
-                <Button
-                  variant="contained"
-                  onClick={handleGetAiTips}
-                  disabled={isAiLoading}
-                  sx={{
-                    background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
-                    color: 'white',
-                    boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
-                  }}
-                >
-                  Get AI Tips
-                </Button>
-              </div>
-
-              {isAiLoading && (
-                <div className="text-center mt-4">
-                  <CircularProgress size={24} />
-                  <p>Analyzing your intake...</p>
-                </div>
-              )}
-
-              {aiError && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  {aiError}
-                </Alert>
-              )}
-
-              {aiTips && (
-                <Card sx={{ mt: 2, background: 'rgba(29, 78, 216, 0.25)', borderRadius: 4 }}>
-                  <CardContent className="text-white">
-                    <h3 className="text-lg font-semibold mb-2">✨ Gemini's Tips</h3>
-                    {aiTips.split('\n').map((tip, index) => (
-                      <p key={index} className="text-sm mb-1">{tip}</p>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
+            </div>
           </div>
           <div className="flex-1 mt-5">
             <h2>Select Date</h2>
@@ -429,9 +365,13 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
               todayData={todayData}
             />
             <div className="flex-1 mt-5">
-              <CalorieChart targetCalouries={targetCalouries} totalCalories={totalCalories} />
-              <h2 className="text-center">Target:{targetCalouries} Consumed: {totalCalories}</h2>
-              
+              <CalorieChart
+                targetCalouries={targetCalouries}
+                totalCalories={totalCalories}
+              />
+              <h2 className="text-center">
+                Target:{targetCalouries} Consumed: {totalCalories}
+              </h2>
             </div>
           </div>
         </div>

@@ -19,8 +19,8 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
   const [quantityDisable, setquantityDisable] = useState(true);
   const [todayData, setTodayData] = useState([]);
   const [totalCalories, setTotalCalories] = useState(0);
-  // AI Tips State
-  const [aiTips, setAiTips] = useState("");
+  // AI Tips State (can be string fallback or structured object returned by server)
+  const [aiTips, setAiTips] = useState(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
   
@@ -180,6 +180,43 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
       console.log("Added new food entry:", newFoodEntry);
     }
   };
+
+  const handleAnalyzeFood = async () => {
+  setAiTips(null);
+    setAiError(null);
+    setIsAiLoading(true);
+
+    try {
+      const foodEntries = todayData[0]?.foodEntries;
+      if (!foodEntries || foodEntries.length === 0) {
+        setAiError("No food data available for today to analyze.");
+        setIsAiLoading(false);
+        return;
+      }
+
+      const response = await fetch('http://localhost:3001/api/analyzeFoodIntake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ foodData: foodEntries }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get AI tips.');
+      }
+
+  const data = await response.json();
+  // Server returns either a parsed JSON object or a fallback { suggestions: text }
+  setAiTips(data);
+    } catch (error) {
+      setAiError(error.message);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+  
   /* Date picker */
   const [datePicker, setdatePicker] = React.useState(dayjs());
   
@@ -369,6 +406,50 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
                 targetCalouries={targetCalouries}
                 totalCalories={totalCalories}
               />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleAnalyzeFood}
+                disabled={isAiLoading}
+                sx={{ mt: 2 }}
+              >
+                {isAiLoading ? <CircularProgress size={24} /> : "Get AI Tips"}
+              </Button>
+              {/* If there's no data for the selected date, show an explanatory hint */}
+              {(!todayData || todayData.length === 0) && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  No food entries found for the selected date. Add a food item and try again.
+                </Alert>
+              )}
+              {aiError && <Alert severity="error" sx={{ mt: 2 }}>{aiError}</Alert>}
+              {aiTips && (
+                <Card sx={{ mt: 2, p: 2, background: "rgba(29, 78, 216, 0.15)", color: "white" }}>
+                  {/* If server returned fallback text */}
+                  {aiTips.suggestions && typeof aiTips.suggestions === 'string' && (
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{aiTips.suggestions}</div>
+                  )}
+
+                  {/* If server returned structured JSON */}
+                  {!aiTips.suggestions && (
+                    <div>
+                      {aiTips.summary && <p style={{ fontWeight: 600 }}>{aiTips.summary}</p>}
+                      {aiTips.fixes && Array.isArray(aiTips.fixes) && (
+                        <ul style={{ marginTop: 8, marginBottom: 8 }}>
+                          {aiTips.fixes.map((fix, idx) => (
+                            <li key={idx} style={{ marginBottom: 6 }}>{fix}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {aiTips.sample_meal && (
+                        <p style={{ marginTop: 6 }}><strong>Sample:</strong> {aiTips.sample_meal}</p>
+                      )}
+                      {aiTips.ui_line && (
+                        <p style={{ marginTop: 6, opacity: 0.9 }}>{aiTips.ui_line}</p>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              )}
               <h2 className="text-center">
                 Target:{targetCalouries} Consumed: {totalCalories}
               </h2>

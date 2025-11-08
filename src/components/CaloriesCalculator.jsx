@@ -661,7 +661,7 @@ const CaloriesCalculator = ({ targetCalouries, setTargetCalouries, setSnackBar, 
                 marginTop: "10px",
               }}
               type="button"
-              onClick={handleTargetUpdate(results.dailyTarget.toFixed(0))}
+              onClick={()=>handleTargetUpdate(results.dailyTarget.toFixed(0))}
             >
               Update Target Calouries
             </Button>

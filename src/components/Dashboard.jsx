@@ -10,7 +10,7 @@ import dayjs, { Dayjs } from "dayjs";
 import CalorieChart from "./CalorieChart";
 import { CircularProgress, Alert } from "@mui/material";
 
-const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
+const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg, user }) => {
   /* Food traking */
   const foodQuantityRef = useRef(null);
   const [foodItem, setfoodItem] = useState(null); // Use null for AutoComplete
@@ -26,7 +26,7 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
   
   /* Intake histroy*/
   const [intakeHistory, setIntakeHistory] = useState([]);
-  const foodHistoryKey = `intakeFoodHistory_${"abinandang"}`; // Define key once
+  const foodHistoryKey = `intakeFoodHistory_${user.uid}`; // Define key once
 
   // --- FIX 1: LOAD HISTORY FROM LOCALSTORAGE ON MOUNT ---
   useEffect(() => {
@@ -159,7 +159,7 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg }) => {
       } else {
         // 5b. If not, create a new daily log for today
         const newDailyLog = {
-          userId: "abinandang",
+          userId: user.uid,
           date: todayDateString,
           foodEntries: [newFoodEntry],
           waterEntries: [], 

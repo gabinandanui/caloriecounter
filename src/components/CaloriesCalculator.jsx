@@ -32,7 +32,7 @@ import {
   DateRange,
   CalendarMonth,
 } from "@mui/icons-material";
-const CaloriesCalculator = ({ targetCalouries, setTargetCalouries, setSnackBar, setSnackBarMsg}) => {
+const CaloriesCalculator = ({ targetCalouries, setTargetCalouries, setSnackBar, setSnackBarMsg, user}) => {
   const [results, setResults] = useState(null);
   const [errors, setErrors] = useState({});
 
@@ -81,11 +81,11 @@ const CaloriesCalculator = ({ targetCalouries, setTargetCalouries, setSnackBar, 
     setTargetCalouries(targetCalouries)
     setSnackBar(true)
     setSnackBarMsg('Target Calories Updated')
-    const foodTargetKey = `intakeFoodTarget_${"abinandang"}`;
+    const foodTargetKey = `intakeFoodTarget_${user.uid}`;
     localStorage.setItem(foodTargetKey, targetCalouries);
   }
   useEffect(() => {
-    const foodTargetKey = `intakeFoodTarget_${"abinandang"}`;
+    const foodTargetKey = `intakeFoodTarget_${user.uid}`;
     const savedFoodTarget = localStorage.getItem(foodTargetKey);
     console.log(savedFoodTarget);
     
@@ -154,8 +154,13 @@ const CaloriesCalculator = ({ targetCalouries, setTargetCalouries, setSnackBar, 
       return;
     }
     setErrors({});
-    setResults(calculateResult(formJsone));
+    const calcResults = calculateResult(formJsone);
+    setResults(calcResults);
+    console.log(calcResults);
+    localStorage.setItem(`bmrTdeeFormData_${user.uid}`, JSON.stringify({...formJsone, calcResults}));
+
   };
+
 
   const activityLevels = [
     { value: "", label: "Choose an activity level" },

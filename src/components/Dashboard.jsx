@@ -194,7 +194,7 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg, user }) => 
         return;
       }
 
-      const response = await fetch('http://localhost:3001/api/analyzeFoodIntake', {
+      const response = await fetch('http://localhost:3000/api/analyzeFoodIntake', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

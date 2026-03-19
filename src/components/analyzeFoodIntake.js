@@ -13,14 +13,20 @@ export default async function handler(req, res) {
 
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error('GEMINI_API_KEY is not set in environment');
-      return res.status(500).json({ error: 'Server misconfiguration: missing API key' });
+    console.log('[AI Tips] Checking API key...');
+    
+    if (!apiKey || apiKey === "your_gemini_api_key_here") {
+      console.error('[AI Tips] GEMINI_API_KEY is not set or is using placeholder value');
+      return res.status(400).json({ error: 'The Gemini API key is missing or is using a placeholder. Please check your .env file.' });
     }
+
+    // Safely log the start of the key for debugging
+    console.log(`[AI Tips] Using key starting with: ${apiKey.substring(0, 5)}...`);
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const modelName = process.env.GENERATIVE_MODEL || 'gemini-1.5-flash';
-    console.log('Using generative model:', modelName);
+    console.log('[AI Tips] Using model:', modelName);
+    
     const model = genAI.getGenerativeModel({ model: modelName });
 
     const prompt = `
@@ -39,16 +45,33 @@ Based on this data, provide:
 Keep the entire response short, crisp, and easy to read.
 `;
 
+    console.log('[AI Tips] Requesting generations from Google AI...');
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
+    if (!text) {
+        throw new Error("The AI returned an empty response.");
+    }
+
+    console.log('[AI Tips] Successfully generated suggestions.');
     res.status(200).json({ suggestions: text });
   } catch (error) {
-    console.error('Error analyzing food intake:', error);
-    if (error.status === 400) {
-        return res.status(400).json({ error: 'API key not valid. Please pass a valid API key.' });
+    console.error('[AI Tips] CRITICAL ERROR:', error);
+    
+    let status = 500;
+    let message = 'An unknown error occurred during AI analysis.';
+
+    // Extract detailed error messages
+    if (error.status === 400 || error.message?.includes('API_KEY_INVALID') || error.message?.includes('not valid')) {
+        status = 400;
+        message = 'The Gemini API key provided is not valid. Please check your .env file.';
+    } else if (error.message?.includes('SAFETY')) {
+        message = 'The AI content was blocked due to safety filters.';
+    } else if (error.message) {
+        message = error.message;
     }
-    res.status(500).json({ error: 'Failed to analyze food intake' });
+
+    res.status(status).json({ error: message });
   }
 }

@@ -1,17 +1,10 @@
-import connectDB from './config/db.js';
+import app from './api/index.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const testDbConnection = async () => {
-  try {
-    console.log('Attempting to connect to the database...');
-    const db = await connectDB();
-    if (db) {
-      console.log('Database connection successful.');
-    } else {
-      console.log('Database connection failed.');
-    }
-  } catch (error) {
-    console.error('An error occurred during database connection:', error);
-  }
-};
+const port = process.env.PORT || 3000;
 
-testDbConnection();
+app.listen(port, () => {
+    console.log(`\n🚀 [server]: API server is running at http://localhost:${port}`);
+    console.log(`📡 [server]: Test the API at http://localhost:${port}/api\n`);
+});

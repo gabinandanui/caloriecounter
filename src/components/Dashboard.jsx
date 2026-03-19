@@ -182,7 +182,7 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg, user }) => 
   };
 
   const handleAnalyzeFood = async () => {
-  setAiTips(null);
+    setAiTips(null);
     setAiError(null);
     setIsAiLoading(true);
 
@@ -194,7 +194,8 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg, user }) => 
         return;
       }
 
-      const API_URL = import.meta.env.VITE_API_URL;
+      // Default to empty string for relative paths if VITE_API_URL is missing
+      const API_URL = import.meta.env.VITE_API_URL || "";
 
       const response = await fetch(`${API_URL}/api/analyzeFoodIntake`, {
         method: 'POST',
@@ -204,15 +205,31 @@ const FoodTracker = ({ targetCalouries, setSnackBar, setSnackBarMsg, user }) => 
         body: JSON.stringify({ foodData: foodEntries }),
       });
 
+      // Check content type before parsing JSON
+      const contentType = response.headers.get("content-type");
+      let errorMessage = "Failed to get AI tips.";
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get AI tips.');
+        if (contentType && contentType.includes("application/json")) {
+           const errorData = await response.json();
+           errorMessage = errorData.error || errorMessage;
+        } else {
+           const textError = await response.text();
+           // Truncate long HTML error pages if necessary
+           errorMessage = textError.length > 100 ? textError.substring(0, 100) + "..." : textError || response.statusText;
+        }
+        throw new Error(errorMessage);
       }
 
-  const data = await response.json();
-  // Server returns either a parsed JSON object or a fallback { suggestions: text }
-  setAiTips(data);
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        setAiTips(data);
+      } else {
+        throw new Error("Server did not return JSON. Please check backend status.");
+      }
+
     } catch (error) {
+      console.error("AI Analysis Error:", error);
       setAiError(error.message);
     } finally {
       setIsAiLoading(false);
